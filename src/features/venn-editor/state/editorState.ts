@@ -338,26 +338,34 @@ export const useEditorState = create<EditorState>()(
         nextId: state.nextId,
         selectedRegionIds: state.regions.filter((r) => r.selected).map((r) => r.id),
       }),
-      onRehydrateStorage: () => (state) => {
-        if (state && Object.keys(state.segments).length > 0) {
-          // Recompute derived state after rehydration
-          const segments = { ...state.segments };
-          computeHierarchy(segments);
-          const regions = calculateRegions(Object.values(segments));
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as PersistedState | undefined;
 
-          // Restore region selection
-          const selectedIds = new Set(state.regions.filter((r) => r.selected).map((r) => r.id));
-          for (const region of regions) {
-            if (selectedIds.has(region.id)) {
-              region.selected = true;
-            }
-          }
-
-          state.segments = segments;
-          state.segmentList = Object.values(segments);
-          state.renderOrder = computeRenderOrder(segments);
-          state.regions = regions;
+        if (!persisted || Object.keys(persisted.segments).length === 0) {
+          return currentState;
         }
+
+        // Recompute hierarchy
+        const segments = { ...persisted.segments };
+        computeHierarchy(segments);
+
+        // Compute regions and restore selection
+        const regions = calculateRegions(Object.values(segments));
+        const selectedIds = new Set(persisted.selectedRegionIds || []);
+        for (const region of regions) {
+          if (selectedIds.has(region.id)) {
+            region.selected = true;
+          }
+        }
+
+        return {
+          ...currentState,
+          segments,
+          segmentList: Object.values(segments),
+          renderOrder: computeRenderOrder(segments),
+          regions,
+          nextId: persisted.nextId,
+        };
       },
     }
   )
