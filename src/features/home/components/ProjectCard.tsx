@@ -1,3 +1,5 @@
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 interface ProjectCardProps {
   title: string;
   description: string;
@@ -7,18 +9,23 @@ interface ProjectCardProps {
 
 export function ProjectCard({ title, description, createdAt, onClick }: ProjectCardProps) {
   return (
-    <div className="project-card" onClick={onClick}>
-      <div className="project-card-preview">
-        <svg viewBox="0 0 100 80">
-          <circle cx="35" cy="40" r="25" fill="rgba(59, 130, 246, 0.3)" stroke="#3b82f6" strokeWidth="1" />
-          <circle cx="65" cy="40" r="25" fill="rgba(239, 68, 68, 0.3)" stroke="#ef4444" strokeWidth="1" />
+    <Card
+      className="cursor-pointer transition-all hover:scale-[1.02] hover:border-primary"
+      onClick={onClick}
+    >
+      <div className="h-32 bg-secondary/50 flex items-center justify-center rounded-t-xl">
+        <svg viewBox="0 0 100 80" className="w-24 h-20">
+          <circle cx="35" cy="40" r="25" fill="hsla(217, 91%, 60%, 0.3)" stroke="hsl(217, 91%, 60%)" strokeWidth="1" />
+          <circle cx="65" cy="40" r="25" fill="hsla(346, 77%, 50%, 0.3)" stroke="hsl(346, 77%, 50%)" strokeWidth="1" />
         </svg>
       </div>
-      <div className="project-card-content">
-        <h3>{title}</h3>
-        <p>{description}</p>
-        <span className="project-card-date">{createdAt}</span>
-      </div>
-    </div>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <span className="text-xs text-muted-foreground">{createdAt}</span>
+      </CardContent>
+    </Card>
   );
 }

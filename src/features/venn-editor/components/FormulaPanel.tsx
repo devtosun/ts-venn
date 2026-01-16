@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Region, Segment } from '../types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface FormulaPanelProps {
   regions: Region[];
@@ -54,9 +55,15 @@ export function FormulaPanel({ regions, segments }: FormulaPanelProps) {
   );
 
   return (
-    <div className="formula-panel">
-      <h3>Formula</h3>
-      <div className="formula-content">{formula}</div>
-    </div>
+    <Card>
+      <CardHeader className="py-3">
+        <CardTitle className="text-primary text-base">Formula</CardTitle>
+      </CardHeader>
+      <CardContent className="py-3">
+        <div className="font-mono text-base p-4 bg-secondary rounded-lg text-[hsl(187,100%,50%)]">
+          {formula}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

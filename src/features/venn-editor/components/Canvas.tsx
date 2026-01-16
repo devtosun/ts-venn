@@ -32,10 +32,16 @@ export function Canvas() {
   const getMousePosition = useCallback(
     (event: React.MouseEvent): { x: number; y: number } => {
       if (!svgRef.current) return { x: 0, y: 0 };
-      const rect = svgRef.current.getBoundingClientRect();
+      const svg = svgRef.current;
+      const rect = svg.getBoundingClientRect();
+
+      // Convert screen coordinates to SVG viewBox coordinates
+      const scaleX = 800 / rect.width;
+      const scaleY = 600 / rect.height;
+
       return {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
+        x: (event.clientX - rect.left) * scaleX,
+        y: (event.clientY - rect.top) * scaleY,
       };
     },
     []
@@ -172,8 +178,9 @@ export function Canvas() {
     <svg
       ref={svgRef}
       id="canvas"
-      width="800"
-      height="600"
+      viewBox="0 0 800 600"
+      preserveAspectRatio="xMidYMid meet"
+      className="w-full h-full"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

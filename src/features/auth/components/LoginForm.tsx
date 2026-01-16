@@ -1,6 +1,9 @@
 import { useState } from 'react';
-import { useAuthState } from '../state/authState';
 import { useNavigate } from 'react-router-dom';
+import { useAuthState } from '../state/authState';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -17,10 +20,10 @@ export function LoginForm() {
   };
 
   return (
-    <form className="login-form" onSubmit={handleSubmit}>
-      <div className="form-group">
-        <label htmlFor="email">Email</label>
-        <input
+    <form className="space-y-4" onSubmit={handleSubmit}>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           type="email"
           value={email}
@@ -29,9 +32,9 @@ export function LoginForm() {
           required
         />
       </div>
-      <div className="form-group">
-        <label htmlFor="password">Password</label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
           id="password"
           type="password"
           value={password}
@@ -40,9 +43,9 @@ export function LoginForm() {
           required
         />
       </div>
-      <button type="submit" className="login-btn">
+      <Button type="submit" className="w-full">
         Login
-      </button>
+      </Button>
     </form>
   );
 }
