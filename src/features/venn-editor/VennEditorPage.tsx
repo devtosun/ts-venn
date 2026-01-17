@@ -43,9 +43,12 @@ export function VennEditorPage() {
   const diagramId = useEditorState((s) => s.diagramId);
   const diagramName = useEditorState((s) => s.diagramName);
 
-  // Load diagram from URL parameter on mount
+  // Load diagram from URL parameter on mount, or clear for new diagram
   useEffect(() => {
-    if (urlDiagramId && !initialLoadDone) {
+    if (initialLoadDone) return;
+
+    if (urlDiagramId) {
+      // Load existing diagram
       const loadFromUrl = async () => {
         const diagram = await diagramStorage.getById(urlDiagramId);
         if (diagram) {
@@ -79,10 +82,13 @@ export function VennEditorPage() {
         setInitialLoadDone(true);
       };
       loadFromUrl();
-    } else if (!urlDiagramId) {
+    } else {
+      // New diagram - clear everything
+      clearDiagram();
+      nextPosRef.current = { x: 150, y: 150 };
       setInitialLoadDone(true);
     }
-  }, [urlDiagramId, initialLoadDone, loadDiagram, setDiagramInfo]);
+  }, [urlDiagramId, initialLoadDone, loadDiagram, setDiagramInfo, clearDiagram]);
 
   const handleAddSegment = () => {
     addSegment(nextPosRef.current.x, nextPosRef.current.y);
