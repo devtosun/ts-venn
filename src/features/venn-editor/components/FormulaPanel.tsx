@@ -55,12 +55,12 @@ export function FormulaPanel({ regions, segments }: FormulaPanelProps) {
   );
 
   return (
-    <Card>
-      <CardHeader className="py-3">
-        <CardTitle className="text-primary text-base">Formula</CardTitle>
+    <Card className="flex-shrink-0">
+      <CardHeader className="py-2 sm:py-3 px-3 sm:px-6">
+        <CardTitle className="text-primary text-sm sm:text-base">Formula</CardTitle>
       </CardHeader>
-      <CardContent className="py-3">
-        <div className="font-mono text-base p-4 bg-secondary rounded-lg text-[hsl(187,100%,50%)]">
+      <CardContent className="py-2 sm:py-3 px-3 sm:px-6">
+        <div className="font-mono text-sm sm:text-base p-2 sm:p-4 bg-secondary rounded-lg text-[hsl(187,100%,50%)] overflow-x-auto whitespace-nowrap">
           {formula}
         </div>
       </CardContent>

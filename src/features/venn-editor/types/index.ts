@@ -8,6 +8,7 @@ export interface Segment {
   parentId: string | null;
   children: string[];
   selected: boolean;
+  elementId?: string; // Reference to storage Element
 }
 
 export interface Region {

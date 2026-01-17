@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { LoginPage } from '../features/auth';
 import { HomePage } from '../features/home';
 import { VennEditorPage } from '../features/venn-editor';
+import { ElementsPage } from '../features/elements';
 import { ProtectedRoute } from './ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -22,6 +23,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <VennEditorPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/editor/:diagramId',
+    element: (
+      <ProtectedRoute>
+        <VennEditorPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/elements',
+    element: (
+      <ProtectedRoute>
+        <ElementsPage />
       </ProtectedRoute>
     ),
   },

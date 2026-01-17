@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Segment, Region, DragState, ResizeState } from '../types';
 import { findSmallestContainer, containsPoint, getArea } from '../utils/algorithms';
 import { calculateRegions, getRegionAtPoint } from '../utils/regions';
+import type { Element } from '@/services/storage/types';
 
 const STORAGE_KEY = 'ts-venn-editor';
 
@@ -32,9 +33,12 @@ interface EditorState {
   dragging: DragState | null;
   resizing: ResizeState | null;
   nextId: number;
+  diagramName: string | null;
+  diagramId: string | null;
 
   // Actions
   addSegment: (cx: number, cy: number) => Segment;
+  addSegmentFromElement: (element: Element, cx: number, cy: number) => Segment;
   selectSegment: (id: string) => void;
   deselectAll: () => void;
   toggleRegion: (id: string) => void;
@@ -48,6 +52,9 @@ interface EditorState {
   isResizing: () => boolean;
   getSegmentAt: (x: number, y: number) => Segment | null;
   getRegionAt: (x: number, y: number) => Region | null;
+  clearDiagram: () => void;
+  setDiagramInfo: (id: string | null, name: string | null) => void;
+  loadDiagram: (segments: Record<string, Segment>, selectedRegionIds: string[], nextId: number) => void;
 }
 
 function computeHierarchy(segments: Record<string, Segment>): void {
@@ -132,6 +139,8 @@ export const useEditorState = create<EditorState>()(
       dragging: null,
       resizing: null,
       nextId: 1,
+      diagramName: null,
+      diagramId: null,
 
   addSegment: (cx, cy) => {
     const state = get();
@@ -149,6 +158,40 @@ export const useEditorState = create<EditorState>()(
       parentId: null,
       children: [],
       selected: false,
+    };
+
+    const newSegments = { ...state.segments, [id]: segment };
+    computeHierarchy(newSegments);
+    const newRegions = computeRegions(newSegments, state.regions);
+    const newSegmentList = Object.values(newSegments);
+    const newRenderOrder = computeRenderOrder(newSegments);
+
+    set({
+      segments: newSegments,
+      segmentList: newSegmentList,
+      renderOrder: newRenderOrder,
+      regions: newRegions,
+      nextId: state.nextId + 1,
+    });
+
+    return segment;
+  },
+
+  addSegmentFromElement: (element, cx, cy) => {
+    const state = get();
+    const id = `segment_${state.nextId}`;
+
+    const segment: Segment = {
+      id,
+      name: element.description || element.code,
+      code: element.code,
+      cx,
+      cy,
+      radius: 80,
+      parentId: null,
+      children: [],
+      selected: false,
+      elementId: element.id,
     };
 
     const newSegments = { ...state.segments, [id]: segment };
@@ -329,6 +372,45 @@ export const useEditorState = create<EditorState>()(
   getRegionAt: (x, y) => {
     const { regions, segmentList } = get();
     return getRegionAtPoint(x, y, regions, segmentList);
+  },
+
+  clearDiagram: () => {
+    set({
+      segments: {},
+      segmentList: [],
+      renderOrder: [],
+      regions: [],
+      dragging: null,
+      resizing: null,
+      nextId: 1,
+      diagramName: null,
+      diagramId: null,
+    });
+  },
+
+  setDiagramInfo: (id, name) => {
+    set({ diagramId: id, diagramName: name });
+  },
+
+  loadDiagram: (segments, selectedRegionIds, nextId) => {
+    computeHierarchy(segments);
+    const regions = calculateRegions(Object.values(segments));
+    const selectedIds = new Set(selectedRegionIds);
+    for (const region of regions) {
+      if (selectedIds.has(region.id)) {
+        region.selected = true;
+      }
+    }
+
+    set({
+      segments,
+      segmentList: Object.values(segments),
+      renderOrder: computeRenderOrder(segments),
+      regions,
+      nextId,
+      dragging: null,
+      resizing: null,
+    });
   },
     }),
     {

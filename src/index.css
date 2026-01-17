@@ -26,6 +26,11 @@
   --color-ring: hsl(346 77% 50%);
 }
 
+html, body, #root {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);

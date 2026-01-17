@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState } from 'react';
 import { useEditorState } from '../state/editorState';
-import { SegmentCircle } from './SegmentCircle';
+import { SegmentCircle, SegmentLabels } from './SegmentCircle';
 import { RegionElement, RegionDefs } from './RegionElement';
 
 export function Canvas() {
@@ -208,6 +208,9 @@ export function Canvas() {
         {renderOrder.map((segment) => (
           <SegmentCircle key={segment.id} segment={segment} />
         ))}
+      </g>
+      <g className="labels-layer">
+        <SegmentLabels segments={segmentList} />
       </g>
     </svg>
   );

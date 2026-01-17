@@ -1,19 +1,88 @@
-import { useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, XCircle } from 'lucide-react';
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Plus, XCircle, Save, FolderOpen, Trash2, MoreVertical } from 'lucide-react';
 import { useEditorState } from './state/editorState';
 import { Canvas } from './components/Canvas';
 import { FormulaPanel } from './components/FormulaPanel';
+import { ElementsSidebar } from './components/ElementsSidebar';
+import { SaveDiagramDialog } from './components/SaveDiagramDialog';
+import { LoadDiagramDialog } from './components/LoadDiagramDialog';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { diagramStorage } from '@/services/storage';
+import type { Element, SavedDiagram } from '@/services/storage/types';
+import type { Segment } from './types';
 
 export function VennEditorPage() {
+  const { diagramId: urlDiagramId } = useParams<{ diagramId?: string }>();
   const nextPosRef = useRef({ x: 150, y: 150 });
   const navigate = useNavigate();
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [loadDialogOpen, setLoadDialogOpen] = useState(false);
+  const [draggingElement, setDraggingElement] = useState<Element | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const addSegment = useEditorState((s) => s.addSegment);
+  const addSegmentFromElement = useEditorState((s) => s.addSegmentFromElement);
   const deselectAll = useEditorState((s) => s.deselectAll);
+  const clearDiagram = useEditorState((s) => s.clearDiagram);
+  const setDiagramInfo = useEditorState((s) => s.setDiagramInfo);
+  const loadDiagram = useEditorState((s) => s.loadDiagram);
   const regions = useEditorState((s) => s.regions);
+  const segments = useEditorState((s) => s.segments);
   const segmentList = useEditorState((s) => s.segmentList);
+  const diagramId = useEditorState((s) => s.diagramId);
+  const diagramName = useEditorState((s) => s.diagramName);
+
+  // Load diagram from URL parameter on mount
+  useEffect(() => {
+    if (urlDiagramId && !initialLoadDone) {
+      const loadFromUrl = async () => {
+        const diagram = await diagramStorage.getById(urlDiagramId);
+        if (diagram) {
+          const loadedSegments: Record<string, Segment> = {};
+          let maxId = 0;
+
+          for (const s of diagram.segments) {
+            loadedSegments[s.id] = {
+              id: s.id,
+              name: s.name,
+              code: s.code,
+              cx: s.cx,
+              cy: s.cy,
+              radius: s.radius,
+              parentId: null,
+              children: [],
+              selected: false,
+              elementId: s.elementId,
+            };
+
+            const match = s.id.match(/segment_(\d+)/);
+            if (match) {
+              const num = parseInt(match[1], 10);
+              if (num > maxId) maxId = num;
+            }
+          }
+
+          loadDiagram(loadedSegments, diagram.selectedRegionIds, maxId + 1);
+          setDiagramInfo(diagram.id, diagram.name);
+        }
+        setInitialLoadDone(true);
+      };
+      loadFromUrl();
+    } else if (!urlDiagramId) {
+      setInitialLoadDone(true);
+    }
+  }, [urlDiagramId, initialLoadDone, loadDiagram, setDiagramInfo]);
 
   const handleAddSegment = () => {
     addSegment(nextPosRef.current.x, nextPosRef.current.y);
@@ -34,31 +103,220 @@ export function VennEditorPage() {
     navigate('/');
   };
 
+  const handleDragStart = (element: Element) => {
+    setDraggingElement(element);
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+
+      if (!draggingElement || !canvasContainerRef.current) {
+        setDraggingElement(null);
+        return;
+      }
+
+      const svg = canvasContainerRef.current.querySelector('svg');
+      if (!svg) {
+        setDraggingElement(null);
+        return;
+      }
+
+      const rect = svg.getBoundingClientRect();
+      const scaleX = 800 / rect.width;
+      const scaleY = 600 / rect.height;
+      const cx = (e.clientX - rect.left) * scaleX;
+      const cy = (e.clientY - rect.top) * scaleY;
+
+      addSegmentFromElement(draggingElement, cx, cy);
+      setDraggingElement(null);
+    },
+    [draggingElement, addSegmentFromElement]
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingElement(null);
+  }, []);
+
+  const handleSave = async (name: string, description: string) => {
+    const segmentsToSave = Object.values(segments).map((s) => ({
+      id: s.id,
+      name: s.name,
+      code: s.code,
+      cx: s.cx,
+      cy: s.cy,
+      radius: s.radius,
+      elementId: s.elementId,
+    }));
+
+    const selectedRegionIds = regions.filter((r) => r.selected).map((r) => r.id);
+
+    if (diagramId) {
+      await diagramStorage.update(diagramId, {
+        name,
+        description,
+        segments: segmentsToSave,
+        selectedRegionIds,
+      });
+    } else {
+      const newDiagram = await diagramStorage.create({
+        name,
+        description,
+        segments: segmentsToSave,
+        selectedRegionIds,
+      });
+      setDiagramInfo(newDiagram.id, newDiagram.name);
+    }
+  };
+
+  const handleLoad = (diagram: SavedDiagram) => {
+    const loadedSegments: Record<string, Segment> = {};
+    let maxId = 0;
+
+    for (const s of diagram.segments) {
+      loadedSegments[s.id] = {
+        id: s.id,
+        name: s.name,
+        code: s.code,
+        cx: s.cx,
+        cy: s.cy,
+        radius: s.radius,
+        parentId: null,
+        children: [],
+        selected: false,
+        elementId: s.elementId,
+      };
+
+      const match = s.id.match(/segment_(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxId) maxId = num;
+      }
+    }
+
+    loadDiagram(loadedSegments, diagram.selectedRegionIds, maxId + 1);
+    setDiagramInfo(diagram.id, diagram.name);
+  };
+
+  const handleClear = () => {
+    clearDiagram();
+    nextPosRef.current = { x: 150, y: 150 };
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-2 sm:px-4 h-14 flex items-center gap-2 sm:gap-4">
-          <Button variant="ghost" size="sm" onClick={handleBack} className="px-2 sm:px-3">
-            <ArrowLeft className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Back</span>
+    <div className="h-screen flex flex-col overflow-hidden" onDragEnd={handleDragEnd}>
+      <header className="border-b bg-card flex-shrink-0">
+        <div className="px-2 sm:px-4 h-12 sm:h-14 flex items-center gap-1 sm:gap-2">
+          <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 sm:h-9 sm:w-9">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="h-6 w-px bg-border hidden sm:block" />
-          <Button onClick={handleAddSegment} size="sm" className="sm:size-default">
-            <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Add Segment</span>
-          </Button>
-          <Button variant="outline" onClick={handleClearSelection} size="sm" className="sm:size-default">
-            <XCircle className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Clear Selection</span>
-          </Button>
+
+          {diagramName && (
+            <span className="text-sm font-medium text-muted-foreground truncate max-w-[100px] sm:max-w-[200px]">
+              {diagramName}
+            </span>
+          )}
+
+          <div className="flex-1" />
+
+          {/* Desktop buttons */}
+          <div className="hidden md:flex items-center gap-2">
+            <Button onClick={handleAddSegment} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Segment
+            </Button>
+            <Button variant="outline" onClick={handleClearSelection} size="sm">
+              <XCircle className="h-4 w-4 mr-2" />
+              Seçimi Temizle
+            </Button>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(true)} size="sm">
+              <Save className="h-4 w-4 mr-2" />
+              Kaydet
+            </Button>
+            <Button variant="outline" onClick={() => setLoadDialogOpen(true)} size="sm">
+              <FolderOpen className="h-4 w-4 mr-2" />
+              Yükle
+            </Button>
+            <Button variant="destructive" onClick={handleClear} size="sm">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Temizle
+            </Button>
+          </div>
+
+          {/* Mobile: Primary action + dropdown */}
+          <div className="flex md:hidden items-center gap-1">
+            <Button onClick={handleAddSegment} size="sm" className="h-8 px-2">
+              <Plus className="h-4 w-4" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleClearSelection}>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Seçimi Temizle
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setSaveDialogOpen(true)}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Kaydet
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setLoadDialogOpen(true)}>
+                  <FolderOpen className="h-4 w-4 mr-2" />
+                  Yükle
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleClear} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Temizle
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </header>
-      <main className="flex-1 flex flex-col p-2 sm:p-4 gap-2 sm:gap-4 min-h-0">
-        <div className="flex-1 min-h-[300px] sm:min-h-[400px]">
-          <Canvas />
+
+      <main className="flex-1 relative overflow-hidden">
+        <ElementsSidebar
+          onDragStart={handleDragStart}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+        />
+
+        <div className="absolute inset-0 flex flex-col p-2 sm:p-4 gap-2 sm:gap-4">
+          <div
+            ref={canvasContainerRef}
+            className="flex-1 min-h-0 border rounded-lg bg-background overflow-hidden"
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            <Canvas />
+          </div>
+          <FormulaPanel regions={regions} segments={segmentList} />
         </div>
-        <FormulaPanel regions={regions} segments={segmentList} />
       </main>
+
+      <SaveDiagramDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        defaultName={diagramName || ''}
+        onSave={handleSave}
+        isUpdate={!!diagramId}
+      />
+
+      <LoadDiagramDialog
+        open={loadDialogOpen}
+        onOpenChange={setLoadDialogOpen}
+        onLoad={handleLoad}
+      />
     </div>
   );
 }
