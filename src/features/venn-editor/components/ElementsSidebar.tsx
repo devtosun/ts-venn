@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GripVertical } from 'lucide-react';
 import { useSegmentsState } from '@/features/segments/state/segmentsState';
 import { Button } from '@/components/ui/button';
 import type { SegmentDefinition } from '@/services/storage/types';
+
+export const SEGMENT_DRAG_TYPE = 'application/x-segment-definition';
 
 interface SegmentsSidebarProps {
   onAddSegment: (segment: SegmentDefinition) => void;
@@ -57,10 +59,15 @@ export function SegmentsSidebar({ onAddSegment, isOpen, onToggle }: SegmentsSide
             segments.map((segment) => (
               <div
                 key={segment.id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData(SEGMENT_DRAG_TYPE, JSON.stringify(segment));
+                  e.dataTransfer.effectAllowed = 'copy';
+                }}
                 onClick={() => onAddSegment(segment)}
-                className="flex items-center gap-2 p-2 rounded-md border bg-background hover:bg-accent cursor-pointer transition-colors"
+                className="flex items-center gap-2 p-2 rounded-md border bg-background hover:bg-accent cursor-grab active:cursor-grabbing transition-colors"
               >
-                <Plus className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   <div className="font-mono font-medium text-sm truncate">
                     {segment.code}
