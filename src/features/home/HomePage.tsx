@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Plus, User, Layers, Trash2 } from 'lucide-react';
+import { LogOut, Plus, User, Layers, Trash2, CircleDot } from 'lucide-react';
 import { useAuthState } from '../auth';
 import { ProjectCard } from './components/ProjectCard';
 import { Button } from '@/components/ui/button';
@@ -90,6 +90,15 @@ export function HomePage() {
               <Layers className="mr-2 h-4 w-4" />
               Elementler
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/segments')}
+              className="hidden sm:flex"
+            >
+              <CircleDot className="mr-2 h-4 w-4" />
+              Segmentler
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
@@ -112,6 +121,11 @@ export function HomePage() {
                   <Layers className="mr-2 h-4 w-4" />
                   <span>Elementler</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/segments')} className="cursor-pointer sm:hidden">
+                  <CircleDot className="mr-2 h-4 w-4" />
+                  <span>Segmentler</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="sm:hidden" />
                 <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Cikis Yap</span>

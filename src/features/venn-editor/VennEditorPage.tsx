@@ -1,10 +1,10 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, XCircle, Save, FolderOpen, Trash2, MoreVertical } from 'lucide-react';
 import { useEditorState } from './state/editorState';
 import { Canvas } from './components/Canvas';
 import { FormulaPanel } from './components/FormulaPanel';
-import { ElementsSidebar } from './components/ElementsSidebar';
+import { SegmentsSidebar } from './components/ElementsSidebar';
 import { SaveDiagramDialog } from './components/SaveDiagramDialog';
 import { LoadDiagramDialog } from './components/LoadDiagramDialog';
 import { Button } from '@/components/ui/button';
@@ -16,23 +16,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { diagramStorage } from '@/services/storage';
-import type { Element, SavedDiagram } from '@/services/storage/types';
+import type { SegmentDefinition, SavedDiagram } from '@/services/storage/types';
 import type { Segment } from './types';
 
 export function VennEditorPage() {
   const { diagramId: urlDiagramId } = useParams<{ diagramId?: string }>();
   const nextPosRef = useRef({ x: 150, y: 150 });
   const navigate = useNavigate();
-  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
-  const [draggingElement, setDraggingElement] = useState<Element | null>(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const addSegment = useEditorState((s) => s.addSegment);
-  const addSegmentFromElement = useEditorState((s) => s.addSegmentFromElement);
+  const addSegmentFromDefinition = useEditorState((s) => s.addSegmentFromDefinition);
   const deselectAll = useEditorState((s) => s.deselectAll);
   const clearDiagram = useEditorState((s) => s.clearDiagram);
   const setDiagramInfo = useEditorState((s) => s.setDiagramInfo);
@@ -66,7 +64,7 @@ export function VennEditorPage() {
               parentId: null,
               children: [],
               selected: false,
-              elementId: s.elementId,
+              segmentDefinitionId: s.segmentDefinitionId,
             };
 
             const match = s.id.match(/segment_(\d+)/);
@@ -101,6 +99,17 @@ export function VennEditorPage() {
     }
   };
 
+  const handleAddSegmentFromDefinition = (segmentDef: SegmentDefinition) => {
+    addSegmentFromDefinition(segmentDef, nextPosRef.current.x, nextPosRef.current.y);
+    nextPosRef.current.x += 60;
+    nextPosRef.current.y += 40;
+
+    if (nextPosRef.current.x > 500) {
+      nextPosRef.current.x = 150;
+      nextPosRef.current.y = 150;
+    }
+  };
+
   const handleClearSelection = () => {
     deselectAll();
   };
@@ -108,46 +117,6 @@ export function VennEditorPage() {
   const handleBack = () => {
     navigate('/');
   };
-
-  const handleDragStart = (element: Element) => {
-    setDraggingElement(element);
-  };
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-
-      if (!draggingElement || !canvasContainerRef.current) {
-        setDraggingElement(null);
-        return;
-      }
-
-      const svg = canvasContainerRef.current.querySelector('svg');
-      if (!svg) {
-        setDraggingElement(null);
-        return;
-      }
-
-      const rect = svg.getBoundingClientRect();
-      const scaleX = 800 / rect.width;
-      const scaleY = 600 / rect.height;
-      const cx = (e.clientX - rect.left) * scaleX;
-      const cy = (e.clientY - rect.top) * scaleY;
-
-      addSegmentFromElement(draggingElement, cx, cy);
-      setDraggingElement(null);
-    },
-    [draggingElement, addSegmentFromElement]
-  );
-
-  const handleDragEnd = useCallback(() => {
-    setDraggingElement(null);
-  }, []);
 
   const handleSave = async (name: string, description: string) => {
     const segmentsToSave = Object.values(segments).map((s) => ({
@@ -157,7 +126,7 @@ export function VennEditorPage() {
       cx: s.cx,
       cy: s.cy,
       radius: s.radius,
-      elementId: s.elementId,
+      segmentDefinitionId: s.segmentDefinitionId,
     }));
 
     const selectedRegionIds = regions.filter((r) => r.selected).map((r) => r.id);
@@ -195,7 +164,7 @@ export function VennEditorPage() {
         parentId: null,
         children: [],
         selected: false,
-        elementId: s.elementId,
+        segmentDefinitionId: s.segmentDefinitionId,
       };
 
       const match = s.id.match(/segment_(\d+)/);
@@ -215,7 +184,7 @@ export function VennEditorPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden" onDragEnd={handleDragEnd}>
+    <div className="h-screen flex flex-col overflow-hidden">
       <header className="border-b bg-card flex-shrink-0">
         <div className="px-2 sm:px-4 h-12 sm:h-14 flex items-center gap-1 sm:gap-2">
           <Button variant="ghost" size="icon" onClick={handleBack} className="h-8 w-8 sm:h-9 sm:w-9">
@@ -238,7 +207,7 @@ export function VennEditorPage() {
             </Button>
             <Button variant="outline" onClick={handleClearSelection} size="sm">
               <XCircle className="h-4 w-4 mr-2" />
-              Seçimi Temizle
+              Secimi Temizle
             </Button>
             <Button variant="outline" onClick={() => setSaveDialogOpen(true)} size="sm">
               <Save className="h-4 w-4 mr-2" />
@@ -246,7 +215,7 @@ export function VennEditorPage() {
             </Button>
             <Button variant="outline" onClick={() => setLoadDialogOpen(true)} size="sm">
               <FolderOpen className="h-4 w-4 mr-2" />
-              Yükle
+              Yukle
             </Button>
             <Button variant="destructive" onClick={handleClear} size="sm">
               <Trash2 className="h-4 w-4 mr-2" />
@@ -268,7 +237,7 @@ export function VennEditorPage() {
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={handleClearSelection}>
                   <XCircle className="h-4 w-4 mr-2" />
-                  Seçimi Temizle
+                  Secimi Temizle
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setSaveDialogOpen(true)}>
@@ -277,7 +246,7 @@ export function VennEditorPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setLoadDialogOpen(true)}>
                   <FolderOpen className="h-4 w-4 mr-2" />
-                  Yükle
+                  Yukle
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleClear} className="text-destructive focus:text-destructive">
@@ -291,19 +260,14 @@ export function VennEditorPage() {
       </header>
 
       <main className="flex-1 relative overflow-hidden">
-        <ElementsSidebar
-          onDragStart={handleDragStart}
+        <SegmentsSidebar
+          onAddSegment={handleAddSegmentFromDefinition}
           isOpen={sidebarOpen}
           onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
 
         <div className="absolute inset-0 flex flex-col p-2 sm:p-4 gap-2 sm:gap-4">
-          <div
-            ref={canvasContainerRef}
-            className="flex-1 min-h-0 border rounded-lg bg-background overflow-hidden"
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
+          <div className="flex-1 min-h-0 border rounded-lg bg-background overflow-hidden">
             <Canvas />
           </div>
           <FormulaPanel regions={regions} segments={segmentList} />

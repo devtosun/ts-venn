@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Segment, Region, DragState, ResizeState } from '../types';
 import { findSmallestContainer, containsPoint, getArea } from '../utils/algorithms';
 import { calculateRegions, getRegionAtPoint } from '../utils/regions';
-import type { Element } from '@/services/storage/types';
+import type { SegmentDefinition } from '@/services/storage/types';
 
 const STORAGE_KEY = 'ts-venn-editor';
 
@@ -38,7 +38,7 @@ interface EditorState {
 
   // Actions
   addSegment: (cx: number, cy: number) => Segment;
-  addSegmentFromElement: (element: Element, cx: number, cy: number) => Segment;
+  addSegmentFromDefinition: (segmentDef: SegmentDefinition, cx: number, cy: number) => Segment;
   selectSegment: (id: string) => void;
   deselectAll: () => void;
   toggleRegion: (id: string) => void;
@@ -177,21 +177,21 @@ export const useEditorState = create<EditorState>()(
     return segment;
   },
 
-  addSegmentFromElement: (element, cx, cy) => {
+  addSegmentFromDefinition: (segmentDef, cx, cy) => {
     const state = get();
     const id = `segment_${state.nextId}`;
 
     const segment: Segment = {
       id,
-      name: element.description || element.code,
-      code: element.code,
+      name: segmentDef.name || segmentDef.code,
+      code: segmentDef.code,
       cx,
       cy,
       radius: 80,
       parentId: null,
       children: [],
       selected: false,
-      elementId: element.id,
+      segmentDefinitionId: segmentDef.id,
     };
 
     const newSegments = { ...state.segments, [id]: segment };

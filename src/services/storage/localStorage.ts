@@ -1,7 +1,8 @@
-import type { Element, SavedDiagram, IElementStorage, IDiagramStorage } from './types';
+import type { Element, SavedDiagram, SegmentDefinition, IElementStorage, IDiagramStorage, ISegmentDefinitionStorage } from './types';
 
 const ELEMENTS_KEY = 'ts-venn-elements';
 const DIAGRAMS_KEY = 'ts-venn-diagrams';
+const SEGMENTS_KEY = 'ts-venn-segments';
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -114,5 +115,58 @@ export const diagramStorage: IDiagramStorage = {
     const diagrams = await this.getAll();
     const filtered = diagrams.filter((d) => d.id !== id);
     localStorage.setItem(DIAGRAMS_KEY, JSON.stringify(filtered));
+  },
+};
+
+// Segment Definition Storage Implementation
+export const segmentDefinitionStorage: ISegmentDefinitionStorage = {
+  async getAll(): Promise<SegmentDefinition[]> {
+    try {
+      const data = localStorage.getItem(SEGMENTS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  async getById(id: string): Promise<SegmentDefinition | null> {
+    const segments = await this.getAll();
+    return segments.find((s) => s.id === id) || null;
+  },
+
+  async create(segment: Omit<SegmentDefinition, 'id' | 'createdAt' | 'updatedAt'>): Promise<SegmentDefinition> {
+    const segments = await this.getAll();
+    const now = getTimestamp();
+    const newSegment: SegmentDefinition = {
+      ...segment,
+      id: generateId(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    segments.push(newSegment);
+    localStorage.setItem(SEGMENTS_KEY, JSON.stringify(segments));
+    return newSegment;
+  },
+
+  async update(id: string, updates: Partial<Omit<SegmentDefinition, 'id' | 'createdAt' | 'updatedAt'>>): Promise<SegmentDefinition> {
+    const segments = await this.getAll();
+    const index = segments.findIndex((s) => s.id === id);
+    if (index === -1) {
+      throw new Error(`Segment with id ${id} not found`);
+    }
+    const updated: SegmentDefinition = {
+      ...segments[index],
+      ...updates,
+      updatedAt: getTimestamp(),
+    };
+    segments[index] = updated;
+    localStorage.setItem(SEGMENTS_KEY, JSON.stringify(segments));
+    return updated;
+  },
+
+  async delete(id: string): Promise<void> {
+    const segments = await this.getAll();
+    const filtered = segments.filter((s) => s.id !== id);
+    localStorage.setItem(SEGMENTS_KEY, JSON.stringify(filtered));
   },
 };

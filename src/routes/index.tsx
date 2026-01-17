@@ -3,6 +3,7 @@ import { LoginPage } from '../features/auth';
 import { HomePage } from '../features/home';
 import { VennEditorPage } from '../features/venn-editor';
 import { ElementsPage } from '../features/elements';
+import { SegmentsPage } from '../features/segments';
 import { ProtectedRoute } from './ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -39,6 +40,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <ElementsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/segments',
+    element: (
+      <ProtectedRoute>
+        <SegmentsPage />
       </ProtectedRoute>
     ),
   },

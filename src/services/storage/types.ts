@@ -15,6 +15,17 @@ export interface Element {
   updatedAt: string;
 }
 
+// Segment Definition - composed of multiple Elements
+export interface SegmentDefinition {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  elementIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Segment for saved diagrams (matches venn-editor Segment but serializable)
 export interface SavedSegment {
   id: string;
@@ -23,7 +34,7 @@ export interface SavedSegment {
   cx: number;
   cy: number;
   radius: number;
-  elementId?: string; // Reference to Element
+  segmentDefinitionId?: string; // Reference to SegmentDefinition
 }
 
 // Saved Venn Diagram
@@ -51,5 +62,13 @@ export interface IDiagramStorage {
   getById(id: string): Promise<SavedDiagram | null>;
   create(diagram: Omit<SavedDiagram, 'id' | 'createdAt' | 'updatedAt'>): Promise<SavedDiagram>;
   update(id: string, diagram: Partial<Omit<SavedDiagram, 'id' | 'createdAt' | 'updatedAt'>>): Promise<SavedDiagram>;
+  delete(id: string): Promise<void>;
+}
+
+export interface ISegmentDefinitionStorage {
+  getAll(): Promise<SegmentDefinition[]>;
+  getById(id: string): Promise<SegmentDefinition | null>;
+  create(segment: Omit<SegmentDefinition, 'id' | 'createdAt' | 'updatedAt'>): Promise<SegmentDefinition>;
+  update(id: string, segment: Partial<Omit<SegmentDefinition, 'id' | 'createdAt' | 'updatedAt'>>): Promise<SegmentDefinition>;
   delete(id: string): Promise<void>;
 }
